@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -745,6 +746,7 @@ namespace MicroRuleEngine
             return new Rule { MemberName = member, TargetValue = target, Operator = oper.ToString() };
         }
 
+
         public static Rule MethodOnChild(string member, string methodName, params object[] inputs)
         {
             return new Rule { MemberName = member, Inputs = inputs.ToList(), Operator = methodName };
@@ -957,4 +959,48 @@ namespace MicroRuleEngine
     public class RuleValueString : RuleValue<string>
     {
     }
+
+    public static class Rule<TSource>
+    {
+	    public static Rule<TSource>.RuleX<TTarget> Create<TTarget>(Expression<Func<TSource, TTarget>> selector)
+	    {
+		    return new Rule<TSource>.RuleX<TTarget>(GetName(selector));
+	    }
+
+	    private static string GetName<TTarget>(Expression<Func<TSource, TTarget>> selector) =>
+		    ((MemberExpression) selector.Body).Member.Name;
+
+
+	    public static Rule IsInteger<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.IsInteger, null);
+	    public static Rule IsSingle<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.IsSingle, null);
+	    public static Rule IsDouble<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.IsDouble, null);
+	    public static Rule IsDecimal<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.IsDecimal, null);
+
+
+        public class RuleX<TTarget>
+	    {
+            private readonly string member;
+
+            public RuleX(string member)
+            {
+	            this.member = member;
+            }
+
+           public  Rule Equals(TTarget target) => Rule.Create(member, mreOperator.Equal, target);
+           public Rule GreaterThan(TTarget target) => Rule.Create(member, mreOperator.GreaterThan, target);
+           public Rule GreaterThanOrEqual(TTarget target) => Rule.Create(member, mreOperator.GreaterThanOrEqual, target);
+           public Rule LessThan(TTarget target) => Rule.Create(member, mreOperator.LessThan, target);
+           public Rule NotEqual(TTarget target) => Rule.Create(member, mreOperator.NotEqual, target);
+           public Rule IsMatch(TTarget target) => Rule.Create(member, mreOperator.IsMatch, target);
+
+        }
+
+
+
+
+    }
+
+
+
+
 }
