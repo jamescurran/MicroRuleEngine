@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -37,6 +38,9 @@ namespace MicroRuleEngine
 
         private static readonly Lazy<MethodInfo> _miDecimalTryParse = new Lazy<MethodInfo>(() =>
             typeof(Decimal).GetMethod("TryParse", new Type[] { typeof(string), Type.GetType("System.Decimal&") }));
+
+        private static readonly Lazy<MethodInfo> _miStringIsNullOrEmpty = new Lazy<MethodInfo>(() =>
+	        typeof(String).GetMethod("IsNullOrEmpty", new Type[] { typeof(string)}));
 
         public Func<T, bool> CompileRule<T>(Rule r)
         {
@@ -322,6 +326,18 @@ namespace MicroRuleEngine
                         propExpression,
                         Expression.MakeMemberAccess(null, typeof(Placeholder).GetField("Decimal"))
                     );
+                case "IsNullOrEmpty":
+	                return Expression.Call(
+		                _miStringIsNullOrEmpty.Value,
+		                propExpression
+	                );
+
+                case "HasValue":
+	                return  Expression.Not(Expression.Call(
+		                _miStringIsNullOrEmpty.Value,
+		                propExpression
+	                ));
+
                 default:
                     break;
             }
@@ -745,6 +761,7 @@ namespace MicroRuleEngine
             return new Rule { MemberName = member, TargetValue = target, Operator = oper.ToString() };
         }
 
+
         public static Rule MethodOnChild(string member, string methodName, params object[] inputs)
         {
             return new Rule { MemberName = member, Inputs = inputs.ToList(), Operator = methodName };
@@ -944,7 +961,16 @@ namespace MicroRuleEngine
         /// <summary>
         /// Checks that a value can be 'TryParsed' to a Decimal
         /// </summary>
-        IsDecimal = 104
+        IsDecimal = 104,
+        /// <summary>
+        /// Check that a string is null or Empty
+        /// </summary>
+        IsNullOrEmpty = 105,
+
+        /// <summary>
+        /// Checks that a string is NOT null or Empty.    TODO: Implement for Nullable values. 
+        /// </summary>
+        HasValue = 106
     }
 
 
@@ -957,4 +983,56 @@ namespace MicroRuleEngine
     public class RuleValueString : RuleValue<string>
     {
     }
+
+    public static class Rule<TSource> 
+    {
+	    public static Rule<TSource>.RuleX<TTarget> Create<TTarget>(Expression<Func<TSource, TTarget>> selector)
+	    {
+		    return new Rule<TSource>.RuleX<TTarget>(GetName(selector));
+	    }
+
+	    private static string GetName<TTarget>(Expression<Func<TSource, TTarget>> selector) =>
+		    ((MemberExpression) selector.Body).Member.Name;
+
+
+	    public static Rule IsInteger<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.IsInteger, null);
+	    public static Rule IsSingle<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.IsSingle, null);
+	    public static Rule IsDouble<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.IsDouble, null);
+	    public static Rule IsDecimal<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.IsDecimal, null);
+	    public static Rule IsNull<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.Equal, null);
+	    public static Rule IsNotNull<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.NotEqual, null);
+	    public static Rule IsNullOrEmpty<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.IsNullOrEmpty, null);
+	    public static Rule HasValue<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.HasValue, null);
+
+        public class RuleX<TTarget>
+	    {
+            private readonly string member;
+
+            public RuleX(string member)
+            {
+	            this.member = member;
+            }
+
+           public  Rule Equals(TTarget target) => Rule.Create(member, mreOperator.Equal, target);
+           public Rule GreaterThan(TTarget target) => Rule.Create(member, mreOperator.GreaterThan, target);
+           public Rule GreaterThanOrEqual(TTarget target) => Rule.Create(member, mreOperator.GreaterThanOrEqual, target);
+           public Rule LessThan(TTarget target) => Rule.Create(member, mreOperator.LessThan, target);
+           public Rule NotEqual(TTarget target) => Rule.Create(member, mreOperator.NotEqual, target);
+           public Rule IsMatch(TTarget target) => Rule.Create(member, mreOperator.IsMatch, target);
+           public Rule IsNull  => Rule.Create(member, mreOperator.Equal, null);
+           public Rule IsNotNull => Rule.Create(member, mreOperator.NotEqual, null);
+
+
+        }
+
+
+
+
+
+
+    }
+
+
+
+
 }
