@@ -448,7 +448,7 @@ namespace MicroRuleEngine
 	            {
 		            txt = txt.Substring(2);
                     if (!Lookup.TryGetValue(txt, out IEnumerable<string> list))
-                        throw new RulesException("'{txt}' is not found in Lookup dictionary."); 
+                        throw new RulesException($"'{txt}' is not found in Lookup dictionary."); 
                     safevalue = list;
                     propType = typeof(IEnumerable<string>);
 	            }

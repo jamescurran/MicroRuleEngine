@@ -58,7 +58,7 @@ namespace MicroRuleEngine.Tests
 			var mre = new MRE();
 			var compliedRule = mre.CompileRule<Order>(rule);
 
-			var result = compliedRule(order);
+			var result = false;		// It should throw an exception on the CompileRule
 			Assert.IsTrue(result);
 		}
 	}
