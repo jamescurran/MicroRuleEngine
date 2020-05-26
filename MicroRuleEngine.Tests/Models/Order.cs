@@ -42,6 +42,7 @@ namespace MicroRuleEngine.Tests.Models
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public Country Country { get; set; }
+        public string City { get; set; }
     }
 
     public class Country

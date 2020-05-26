@@ -224,7 +224,9 @@ namespace MicroRuleEngine.Tests
                     Country = new Country()
                     {
                         CountryCode = "AUS"
-                    }
+                    },
+                    City = "London"
+
                 },
                 Items = new List<Item>()
                 {

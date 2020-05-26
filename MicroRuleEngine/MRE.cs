@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 
@@ -11,11 +12,19 @@ namespace MicroRuleEngine
 {
     public class MRE
     {
+
+        public static IDictionary<string, IEnumerable<string>> Lookup { get; set; } = new Dictionary<string, IEnumerable<string>>();
+
+
         private static readonly ExpressionType[] _nestedOperators = new ExpressionType[]
             {ExpressionType.And, ExpressionType.AndAlso, ExpressionType.Or, ExpressionType.OrElse};
 
         private static readonly Lazy<MethodInfo> _miRegexIsMatch = new Lazy<MethodInfo>(() =>
             typeof(Regex).GetMethod("IsMatch", new[] { typeof(string), typeof(string), typeof(RegexOptions) }));
+
+        private static readonly Lazy<MethodInfo> _miAmong = new Lazy<MethodInfo>(() =>
+	        typeof(MRE).GetMethod("Among", BindingFlags.NonPublic | BindingFlags.Static));
+//		        ,new Type[] { typeof(string), typeof(IEnumerable<string>) }));
 
         private static readonly Lazy<MethodInfo> _miGetItem = new Lazy<MethodInfo>(() =>
             typeof(System.Data.DataRow).GetMethod("get_Item", new Type[] { typeof(string) }));
@@ -278,13 +287,18 @@ namespace MicroRuleEngine
             {
                 Expression right;
                 var txt = rule.TargetValue as string;
-                if (txt != null && txt.StartsWith("*."))
-                {
-                    txt = txt.Substring(2);
-                    right = GetProperty(param, txt);
-                }
+                if (txt == null)
+	                right = StringToExpression(rule.TargetValue, propType);
                 else
-                    right = StringToExpression(rule.TargetValue, propType);
+                {
+	                if (txt.StartsWith("*."))
+	                {
+		                txt = txt.Substring(2);
+		                right = GetProperty(param, txt);
+	                }
+	                else
+		                right = StringToExpression(rule.TargetValue, propType);
+                }
 
                 return Expression.MakeBinary(tBinary, propExpression, right);
             }
@@ -322,9 +336,16 @@ namespace MicroRuleEngine
                         propExpression,
                         Expression.MakeMemberAccess(null, typeof(Placeholder).GetField("Decimal"))
                     );
+                case "Among":
+	                return Expression.Call(
+		                _miAmong.Value,
+		                propExpression,
+		                StringToExpression(rule.TargetValue, propType));
+
                 default:
                     break;
             }
+
 
             var enumrOperation = IsEnumerableOperator(rule.Operator);
             if (enumrOperation != null)
@@ -357,7 +378,7 @@ namespace MicroRuleEngine
                         int i = 0;
                         foreach (var item in rule.Inputs)
                         {
-                            expressions.Add(MRE.StringToExpression(item, parameters[i].ParameterType));
+                            expressions.Add(StringToExpression(item, parameters[i].ParameterType));
                             i++;
                         }
                     }
@@ -382,6 +403,8 @@ namespace MicroRuleEngine
                     return callExpression;
             }
         }
+
+        private static bool Among(string key, IEnumerable<string> list) => list.Contains(key);
 
         private static MethodInfo GetLinqMethod(string name, int numParameter)
         {
@@ -408,7 +431,7 @@ namespace MicroRuleEngine
                 return Expression.Convert(expMember, type);
         }
 
-        private static Expression StringToExpression(object value, Type propType)
+        private static  Expression StringToExpression(object value, Type propType)
         {
             Debug.Assert(propType != null);
 
@@ -419,9 +442,17 @@ namespace MicroRuleEngine
             {
                 safevalue = null;
             }
-            else if (txt != null)
+            else  if (txt != null)
             {
-                if (txt.ToLower() == "null")
+	            if (txt.StartsWith("_."))
+	            {
+		            txt = txt.Substring(2);
+                    if (!Lookup.TryGetValue(txt, out IEnumerable<string> list))
+                        throw new RulesException("'{txt}' is not found in Lookup dictionary."); 
+                    safevalue = list;
+                    propType = typeof(IEnumerable<string>);
+	            }
+	            else if (txt.ToLower() == "null")
                     safevalue = null;
                 else if (propType.IsEnum)
                     safevalue = Enum.Parse(propType, txt);
@@ -635,7 +666,8 @@ namespace MicroRuleEngine
                     mreOperator.IsInteger.ToString("g"),
                     mreOperator.IsSingle.ToString("g"),
                     mreOperator.IsDouble.ToString("g"),
-                    mreOperator.IsDecimal.ToString("g")
+                    mreOperator.IsDecimal.ToString("g"),
+                    mreOperator.Among.ToString("g")
                 };
             public static List<Operator> Operators(Type type, bool addLogicOperators = false, bool noOverloads = true)
             {
@@ -944,7 +976,9 @@ namespace MicroRuleEngine
         /// <summary>
         /// Checks that a value can be 'TryParsed' to a Decimal
         /// </summary>
-        IsDecimal = 104
+        IsDecimal = 104,
+
+        Among,
     }
 
 
