@@ -366,6 +366,24 @@ namespace MicroRuleEngine.Tests
             }
         }
 
+        [TestMethod]
+        public void BuilderTest()
+        {
+	        var rb = new RuleBuilder<Order>();
+
+	        rb.LessThan(x=>x.Total, 123.45m).Error("Total greater than 123.45")
+		        .Equals(x => x.OrderId, 432).Warning("Order Id is not 432");
+
+
+	        var mre = new MRE();
+            mre.Lookup.
+	        var list = rb.List;
+
+
+
+
+
+        }
 
 
     }

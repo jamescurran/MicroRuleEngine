@@ -716,6 +716,9 @@ namespace MicroRuleEngine
         [DataMember] public IList<Rule> Rules { get; set; }
         [DataMember] public IEnumerable<object> Inputs { get; set; }
 
+        [DataMember] public string Message { get; set; }
+
+        [DataMember] public bool IsWarning { get; set; }      // false (default) = Error
 
         public static Rule operator |(Rule lhs, Rule rhs)
         {
