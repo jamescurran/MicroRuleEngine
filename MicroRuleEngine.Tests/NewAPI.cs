@@ -376,7 +376,6 @@ namespace MicroRuleEngine.Tests
 
 
 	        var mre = new MRE();
-            mre.Lookup.
 	        var list = rb.List;
 
 

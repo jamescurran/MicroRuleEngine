@@ -6,6 +6,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace MicroRuleEngine
@@ -333,10 +334,19 @@ namespace MicroRuleEngine
 	                );
 
                 case "HasValue":
-	                return  Expression.Not(Expression.Call(
-		                _miStringIsNullOrEmpty.Value,
-		                propExpression
-	                ));
+	                if (propType == typeof(string))
+	                {
+		                return Expression.Not(Expression.Call(
+			                _miStringIsNullOrEmpty.Value,
+			                propExpression
+		                ));
+	                }
+                    else if (propType.IsGenericType && propType.GetGenericTypeDefinition() == typeof(Nullable<>))
+	                {
+		                var miHasValue = propType.GetMethod("get_HasValue");
+                        return Expression.Call(propExpression, miHasValue);
+	                }
+                    throw new RulesException($"HasValue cannot be applied to {rule.MemberName}");
 
                 default:
                     break;
@@ -427,6 +437,20 @@ namespace MicroRuleEngine
         private static Expression StringToExpression(object value, Type propType)
         {
             Debug.Assert(propType != null);
+
+            if (value is System.Text.Json.JsonElement jsonElement)
+            {
+	            switch(jsonElement.ValueKind )
+	            {
+                    case JsonValueKind.String:
+	                    value = jsonElement.GetString();
+	                    break;
+
+                    case JsonValueKind.Number:
+	                    value = jsonElement.GetDouble();
+	                    break;
+	            }
+            }
 
             object safevalue;
             Type valuetype = propType;
@@ -1006,6 +1030,19 @@ namespace MicroRuleEngine
 	    public static Rule IsNotNull<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.NotEqual, null);
 	    public static Rule IsNullOrEmpty<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.IsNullOrEmpty, null);
 	    public static Rule HasValue<TTarget>(Expression<Func<TSource, TTarget>> selector) => Rule.Create(GetName(selector), mreOperator.HasValue, null);
+	    public static Rule IsEqual<TTarget>(Expression<Func<TSource, TTarget>> selector, TTarget target) => Rule.Create(GetName(selector), mreOperator.Equal, target);
+	    public static Rule IsNotEqual<TTarget>(Expression<Func<TSource, TTarget>> selector, TTarget target) => Rule.Create(GetName(selector), mreOperator.NotEqual, target);
+
+	    public static Rule Equals<TTarget>(Expression<Func<TSource, TTarget>> selector, TTarget target) => Rule.Create(GetName(selector), mreOperator.Equal, target);
+	    public static Rule GreaterThan<TTarget>(Expression<Func<TSource, TTarget>> selector, TTarget target) => Rule.Create(GetName(selector), mreOperator.GreaterThan, target);
+	    public static Rule GreaterThanOrEqual<TTarget>(Expression<Func<TSource, TTarget>> selector, TTarget target) => Rule.Create(GetName(selector), mreOperator.GreaterThanOrEqual, target);
+	    public static Rule LessThan<TTarget>(Expression<Func<TSource, TTarget>> selector, TTarget target) => Rule.Create(GetName(selector), mreOperator.LessThan, target);
+	    public static Rule NotEqual<TTarget>(Expression<Func<TSource, TTarget>> selector, TTarget target) => Rule.Create(GetName(selector), mreOperator.NotEqual, target);
+	    public static Rule IsMatch<TTarget>(Expression<Func<TSource, TTarget>> selector, TTarget target) => Rule.Create(GetName(selector), mreOperator.IsMatch, target);
+
+
+
+
 
         public class RuleX<TTarget>
 	    {
