@@ -22,7 +22,7 @@ after_build:
   # For once the build has completed
 test_script:
  - cmd: nuget install Appveyor.TestLogger
- - cmd: dotnet test --no-build --no-restore --test-adapter-path:. --logger:Appveyor Test
+ - cmd: dotnet test --no-build --no-restore --test-adapter-path:. --logger:Appveyor
 clone_depth: 1
 on_finish :
   # any cleanup in here
