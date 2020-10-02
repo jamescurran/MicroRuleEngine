@@ -15,9 +15,9 @@ before_build:
   # Display .NET Core version
   - cmd: dotnet --version
   # Display minimal restore text
-  - cmd: dotnet restore ./MicroRuleEngine/MicroRuleEngine.csproj --verbosity m
+  - cmd: dotnet restore
 build_script:
-  - cmd: dotnet build ./MicroRuleEngine/MicroRuleEngine.csproj -c Release
+  - cmd: dotnet build
 after_build:
   # For once the build has completed
 test:
