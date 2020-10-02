@@ -5,7 +5,6 @@ pull_requests:
 branches:
   only:
   - master
-  - apveyor-config
 init:
   # Good practice, because Windows line endings are different from Unix/Linux ones
   - cmd: git config --global core.autocrlf true
