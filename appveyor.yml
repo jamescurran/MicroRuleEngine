@@ -24,9 +24,8 @@ before_test:
    - cmd: dotnet build ./MicroRuleEngine.Core.Tests/MicroRuleEngine.Core.Tests.csproj
    - cmd: dotnet restore ./MicroRuleEngine.Tests/MicroRuleEngine.Tests.csproj --verbosity m
    - cmd: dotnet build ./MicroRuleEngine.Tests/MicroRuleEngine.Tests.csproj
- test_script:
-   - cmd: dotnet test MicroRuleEngine.sln
-after_test:
+test_script:
+   - cmd: dotnet test
 clone_depth: 1
 on_finish :
   # any cleanup in here
