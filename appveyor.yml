@@ -1,0 +1,32 @@
+version: '1.0.{build}'
+image: Visual Studio 2019
+pull_requests:
+  do_not_increment_build_number: true
+branches:
+  only:
+  - master
+init:
+  # Good practice, because Windows line endings are different from Unix/Linux ones
+  - cmd: git config --global core.autocrlf true
+install:
+  - 
+before_build:
+  # Display .NET Core version
+  - cmd: dotnet --version
+  # Display minimal restore text
+  - cmd: dotnet restore ./MicroRuleEngine/MicroRuleEngine.csproj --verbosity m
+build_script:
+  - cmd: dotnet build ./MicroRuleEngine/MicroRuleEngine.csproj -c Release
+after_build:
+  # For once the build has completed
+before_test:
+   - cmd: dotnet restore ./MicroRuleEngine.Core.Tests/MicroRuleEngine.Core.Tests.csproj --verbosity m
+   - cmd: dotnet build ./MicroRuleEngine.Core.Tests/MicroRuleEngine.Core.Tests.csproj
+   - cmd: dotnet restore ./MicroRuleEngine.Tests/MicroRuleEngine.Tests.csproj --verbosity m
+   - cmd: dotnet build ./MicroRuleEngine.Tests/MicroRuleEngine.Tests.csproj
+ test_script:
+   - cmd:  dotnet test
+clone_depth: 1
+on_finish :
+  # any cleanup in here
+deploy: off
